@@ -1,5 +1,4 @@
 import nltk
-from nltk.corpus import stopwords
 import random
 from nltk.classify.scikitlearn import SklearnClassifier
 from sklearn.naive_bayes import MultinomialNB, BernoulliNB
@@ -12,6 +11,20 @@ from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from zmq.backend.cython import message
+import os
+os.environ["MKL_THREADING_LAYER"] = "GNU"
+os.environ["KERAS_BACKEND"] = "theano"
+import numpy
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers.embeddings import Embedding
+from keras.preprocessing import sequence
+# fix random seed for reproducibility
+numpy.random.seed(7)
 
 ps = PorterStemmer()
 stop_words = stopwords.words('english') + list(string.punctuation)
@@ -39,7 +52,7 @@ dist
 
 # remove points we're not confident about
 filtered = df.values.tolist()
-filtered = list(filter(lambda x: x[6] == 1.0, filtered))
+filtered = list(filter(lambda x: x[6] == 1.0 and x[5] != "unknown", filtered))
 
 # split our data to three smaller lists by gender
 males = list(filter(lambda x: x[5] == "male", filtered))
@@ -124,14 +137,45 @@ def union(a, b, c):
     return list(first | set(c))
 
 top_words = union(male_features, female_features, brand_features)
+
 tweet_by_gender = (map(lambda x: (try_str(x[10])+ try_str(x[19]), x[5]),filtered))
 
 feature_set = [(find_features(top_words, line[0]), line[1]) for line in tweet_by_gender]
 training_set = feature_set[:int(len(feature_set)*4/5)]
 testing_set = feature_set[int(len(feature_set)*4/5):]
 
-# creating a naive bayes classifier
-NB_classifier = nltk.NaiveBayesClassifier.train(training_set)
-accuracy = nltk.classify.accuracy(NB_classifier, testing_set)*100
-print("Naive Bayes Classifier accuracy =", accuracy)
-NB_classifier.show_most_informative_features(20)
+# # creating a naive bayes classifier
+# NB_classifier = nltk.NaiveBayesClassifier.train(training_set)
+# accuracy = nltk.classify.accuracy(NB_classifier, testing_set)*100
+# print("Naive Bayes Classifier accuracy =", accuracy)
+# NB_classifier.show_most_informative_features(20)
+#
+# # creating a logistic regression classifier
+# LogisticRegression_classifier = SklearnClassifier(LogisticRegression())
+# LogisticRegression_classifier.train(training_set)
+# accuracy = nltk.classify.accuracy(LogisticRegression_classifier, testing_set)*100
+# print("Logistic Regression classifier accuracy =", accuracy)
+
+# creating a nural network classifier
+neural_data_set = list(filter(lambda x: x[1] != "brand", tweet_by_gender))
+x = list(neural_data_set[i][0] for i in range (0, len(neural_data_set)))
+encoder = LabelEncoder()
+y = encoder.fit_transform(list(neural_data_set[i][1] for i in range(0, len(neural_data_set))))
+
+X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2)
+
+max_text_length = 500
+embedding_vecor_length = 32
+model = Sequential()
+
+model.add(Embedding(len(top_words), embedding_vecor_length))#,input_length=max_text_length))
+model.add(LSTM(100))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+print(model.summary())
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=128)
+
+# Final evaluation of the model
+scores = model.evaluate(X_test, y_test, verbose=0)
+print("Accuracy: %.2f%%" % (scores[1]*100))
+
