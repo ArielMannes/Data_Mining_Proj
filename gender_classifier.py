@@ -14,17 +14,21 @@ from zmq.backend.cython import message
 import os
 os.environ["MKL_THREADING_LAYER"] = "GNU"
 os.environ["KERAS_BACKEND"] = "theano"
-import numpy
+import numpy as np
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+import keras
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
+import keras.preprocessing.text as kpt
+from keras.preprocessing.text import Tokenizer as keras_token
+
 # fix random seed for reproducibility
-numpy.random.seed(7)
+np.random.seed(7)
 
 ps = PorterStemmer()
 stop_words = stopwords.words('english') + list(string.punctuation)
@@ -162,13 +166,47 @@ x = list(neural_data_set[i][0] for i in range (0, len(neural_data_set)))
 encoder = LabelEncoder()
 y = encoder.fit_transform(list(neural_data_set[i][1] for i in range(0, len(neural_data_set))))
 
+x = x[:500]
+y = y[:500]
+
+
+#max_words = 4000
+max_words = 40
+k_tokenizer = keras_token(num_words=max_words)
+k_tokenizer.fit_on_texts(x)
+dictionary = k_tokenizer.word_index
+
+def convert_text_to_index_array(text):
+    # one really important thing that `text_to_word_sequence` does
+    # is make all texts the same length -- in this case, the length
+    # of the longest text in the set.
+    return [dictionary[word] for word in kpt.text_to_word_sequence(text)]
+
+allWordIndices = []
+# for each tweet, change each token to its ID in the Tokenizer's word_index
+for text in x:
+    wordIndices = convert_text_to_index_array(text)
+    allWordIndices.append(wordIndices)
+
+# now we have a list of all tweets converted to index arrays.
+# cast as an array for future usage.
+allWordIndices = np.asarray(allWordIndices)
+
+# create one-hot matrices out of the indexed tweets
+x = k_tokenizer.sequences_to_matrix(allWordIndices, mode='binary')
+# treat the labels as categories
+y = keras.utils.to_categorical(y, 2)
+
+
+
 X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2)
 
 max_text_length = 500
 embedding_vecor_length = 32
 model = Sequential()
 
-model.add(Embedding(len(top_words), embedding_vecor_length))#,input_length=max_text_length))
+
+model.add(Embedding(len(top_words), embedding_vecor_length,input_length=max_text_length))
 model.add(LSTM(100))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
