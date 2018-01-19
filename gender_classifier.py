@@ -170,8 +170,9 @@ x = x[:500]
 y = y[:500]
 
 
-#max_words = 4000
-max_words = 40
+max_words = 4000
+#max_words = 40
+max_text_length = 400
 k_tokenizer = keras_token(num_words=max_words)
 k_tokenizer.fit_on_texts(x)
 dictionary = k_tokenizer.word_index
@@ -180,20 +181,21 @@ def convert_text_to_index_array(text):
     # one really important thing that `text_to_word_sequence` does
     # is make all texts the same length -- in this case, the length
     # of the longest text in the set.
-    return [dictionary[word] for word in kpt.text_to_word_sequence(text)]
+   return [dictionary[word] for word in kpt.text_to_word_sequence(text)]
 
 allWordIndices = []
 # for each tweet, change each token to its ID in the Tokenizer's word_index
 for text in x:
-    wordIndices = convert_text_to_index_array(text)
-    allWordIndices.append(wordIndices)
+   wordIndices = convert_text_to_index_array(text)
+   allWordIndices.append(wordIndices)
 
 # now we have a list of all tweets converted to index arrays.
 # cast as an array for future usage.
 allWordIndices = np.asarray(allWordIndices)
 
 # create one-hot matrices out of the indexed tweets
-x = k_tokenizer.sequences_to_matrix(allWordIndices, mode='binary')
+x = k_tokenizer.texts_to_sequences(x)
+x = sequence.pad_sequences(x, maxlen  =max_text_length )
 # treat the labels as categories
 y = keras.utils.to_categorical(y, 2)
 
@@ -201,12 +203,15 @@ y = keras.utils.to_categorical(y, 2)
 
 X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2)
 
-max_text_length = 500
+
+
 embedding_vecor_length = 32
 model = Sequential()
+#X_train.shape
 
+type(X_train)
 
-model.add(Embedding(len(top_words), embedding_vecor_length,input_length=max_text_length))
+model.add(Embedding(max_words, embedding_vecor_length,input_length=X_train.shape[0]))
 model.add(LSTM(100))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
