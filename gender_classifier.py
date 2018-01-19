@@ -66,7 +66,9 @@ brands = list(filter(lambda x: x[5] == "brand", filtered))
 
 def try_str(t):
     try:
-        return str(t)
+        st = str(t)
+        st = st.lower()
+        return st
     except:
         return ""
 
@@ -148,77 +150,67 @@ feature_set = [(find_features(top_words, line[0]), line[1]) for line in tweet_by
 training_set = feature_set[:int(len(feature_set)*4/5)]
 testing_set = feature_set[int(len(feature_set)*4/5):]
 
-# # creating a naive bayes classifier
-# NB_classifier = nltk.NaiveBayesClassifier.train(training_set)
-# accuracy = nltk.classify.accuracy(NB_classifier, testing_set)*100
-# print("Naive Bayes Classifier accuracy =", accuracy)
-# NB_classifier.show_most_informative_features(20)
 #
-# # creating a logistic regression classifier
-# LogisticRegression_classifier = SklearnClassifier(LogisticRegression())
-# LogisticRegression_classifier.train(training_set)
-# accuracy = nltk.classify.accuracy(LogisticRegression_classifier, testing_set)*100
-# print("Logistic Regression classifier accuracy =", accuracy)
-
 # creating a nural network classifier
 neural_data_set = list(filter(lambda x: x[1] != "brand", tweet_by_gender))
 x = list(neural_data_set[i][0] for i in range (0, len(neural_data_set)))
 encoder = LabelEncoder()
 y = encoder.fit_transform(list(neural_data_set[i][1] for i in range(0, len(neural_data_set))))
 
-x = x[:500]
-y = y[:500]
-
-
 max_words = 4000
-#max_words = 40
+
 max_text_length = 400
 k_tokenizer = keras_token(num_words=max_words)
 k_tokenizer.fit_on_texts(x)
-dictionary = k_tokenizer.word_index
 
-def convert_text_to_index_array(text):
-    # one really important thing that `text_to_word_sequence` does
-    # is make all texts the same length -- in this case, the length
-    # of the longest text in the set.
-   return [dictionary[word] for word in kpt.text_to_word_sequence(text)]
-
-allWordIndices = []
-# for each tweet, change each token to its ID in the Tokenizer's word_index
-for text in x:
-   wordIndices = convert_text_to_index_array(text)
-   allWordIndices.append(wordIndices)
-
-# now we have a list of all tweets converted to index arrays.
-# cast as an array for future usage.
-allWordIndices = np.asarray(allWordIndices)
-
-# create one-hot matrices out of the indexed tweets
 x = k_tokenizer.texts_to_sequences(x)
-x = sequence.pad_sequences(x, maxlen  =max_text_length )
+x = sequence.pad_sequences(x)
 # treat the labels as categories
 y = keras.utils.to_categorical(y, 2)
 
 
 
-X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2)
+X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2, random_state= 42)
 
 
 
-embedding_vecor_length = 32
+embed_dim = 128
+lstm_out = 196
+
 model = Sequential()
-#X_train.shape
-
-type(X_train)
-
-model.add(Embedding(max_words, embedding_vecor_length,input_length=X_train.shape[0]))
-model.add(LSTM(100))
-model.add(Dense(1, activation='sigmoid'))
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.add(Embedding(max_words, embed_dim,input_length = x.shape[1]))
+model.add(LSTM(lstm_out))
+model.add(Dense(2,activation='softmax'))
+model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
 print(model.summary())
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=128)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=7, batch_size=256)
 
 # Final evaluation of the model
+validation_size = 500
+X_validate = X_test[-validation_size:]
+Y_validate = y_test[-validation_size:]
+X_test = X_test[:-validation_size]
+y_test = y_test[:-validation_size]
+
 scores = model.evaluate(X_test, y_test, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
+
+pos_cnt, neg_cnt, pos_correct, neg_correct = 0, 0, 0, 0
+for x in range(len(X_validate)):
+
+    result = model.predict(X_validate[x].reshape(1, X_test.shape[1]), batch_size=1, verbose=2)[0]
+
+    if np.argmax(result) == np.argmax(Y_validate[x]):
+        if np.argmax(Y_validate[x]) == 0:
+            neg_correct += 1
+        else:
+            pos_correct += 1
+
+    if np.argmax(Y_validate[x]) == 0:
+        neg_cnt += 1
+    else:
+        pos_cnt += 1
+
+print("pos_acc", pos_correct / pos_cnt * 100, "%")
+print("neg_acc", neg_correct / neg_cnt * 100, "%")
 
