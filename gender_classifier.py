@@ -99,9 +99,9 @@ def get_list_of_words(lst):
     return word_list
 
 
-def word_distrebution(text, messeg):
+def word_distrebution(text, messeg, f):
     ret_list = []
-    list_words = " ".join(list(map(lambda x: try_str(x[10])+try_str(x[19]), text)))
+    list_words = " ".join(list(map(f, text)))
     #list_words = " ".join(list(map(lambda x: try_str(x[19]), text)))
     list_words = list_words.lower().split(" ")
     # word_list = wordify(word_list).split(" ")
@@ -121,13 +121,13 @@ def word_distrebution(text, messeg):
 
 
 
-male_features = word_distrebution(males, 'Male most frequent words')
+male_features = word_distrebution(males, 'Male most frequent words', lambda x: try_str(x[10])+try_str(x[19]))
 
 print ()
-female_features = word_distrebution(females, 'Female most frequent words')
+female_features = word_distrebution(females, 'Female most frequent words', lambda x: try_str(x[10])+try_str(x[19]))
 
 print ()
-brand_features = word_distrebution(brands, 'Brand most frequent words')
+brand_features = word_distrebution(brands, 'Brand most frequent words', lambda x: try_str(x[10])+try_str(x[19]))
 
 ## Question 2
 def find_features(top_words, text):

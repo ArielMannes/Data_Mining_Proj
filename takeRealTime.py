@@ -1,9 +1,15 @@
-import tweepy
 from tweepy import OAuthHandler
 from tweepy import Stream
 from tweepy.streaming import StreamListener
 import json
 import unicodecsv as csv
+from nltk.probability import FreqDist
+import pandas as pd
+from nltk.corpus import stopwords
+import string
+
+
+# Collect live data
 
 
 def getLiveData():
@@ -13,7 +19,6 @@ def getLiveData():
     access_secret = '59nOtlV0fEuS9qeN0DeroMqsWQ45Qmcn0Os5IqmnNWDvd'
     auth = OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_secret)
-    api = tweepy.API(auth)
 
     class MyListener(StreamListener):
         def on_data(self, data):
@@ -48,4 +53,38 @@ def getLiveData():
                                  '#like4like', '#likeforlike', '#tag', '#tagsforlikes', '#instatag', '#instame'])
 
 
-getLiveData()
+def readData():
+    with open('realTime.csv') as f:
+        allData = []
+        reader = csv.reader(f, encoding='utf-8')
+        for row in reader:
+            allData.append(row[0])
+
+        return allData
+
+
+stop_words = stopwords.words('english') + list(string.punctuation) + ['RT', 'rt', '&amp;']
+
+
+def word_distrebution(text, messeg, f):
+    ret_list = []
+    list_words = " ".join(list(map(f, text)))
+    list_words = list_words.lower().split(" ")
+    list_words = list(w for w in list_words if len(w) > 1 and w not in stop_words)
+    word_dist = FreqDist(list_words)
+    feature_set = word_dist.most_common(4000)
+    word_dist = word_dist.most_common(10)
+    dist = pd.DataFrame.from_records(word_dist).transpose
+    print (messeg)
+    print dist
+
+    for word in feature_set:
+        ret_list.append(word[0])
+
+    return ret_list
+
+
+i = readData()
+
+word_distrebution(i, "real time twits", lambda x: x)
+print len(i)
