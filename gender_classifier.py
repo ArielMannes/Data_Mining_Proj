@@ -166,8 +166,8 @@ x = list(neural_data_set[i][0] for i in range (0, len(neural_data_set)))
 encoder = LabelEncoder()
 y = encoder.fit_transform(list(neural_data_set[i][1] for i in range(0, len(neural_data_set))))
 
-x = x[:500]
-y = y[:500]
+#x = x[:500]
+#y = y[:500]
 
 
 #max_words = 4000
@@ -182,18 +182,21 @@ def convert_text_to_index_array(text):
     # of the longest text in the set.
     return [dictionary[word] for word in kpt.text_to_word_sequence(text)]
 
-allWordIndices = []
-# for each tweet, change each token to its ID in the Tokenizer's word_index
-for text in x:
-    wordIndices = convert_text_to_index_array(text)
-    allWordIndices.append(wordIndices)
+def x_preprocessing(x):
+    allWordIndices = []
+    # for each tweet, change each token to its ID in the Tokenizer's word_index
+    for text in x:
+        wordIndices = convert_text_to_index_array(text)
+        allWordIndices.append(wordIndices)
 
-# now we have a list of all tweets converted to index arrays.
-# cast as an array for future usage.
-allWordIndices = np.asarray(allWordIndices)
+    # now we have a list of all tweets converted to index arrays.
+    # cast as an array for future usage.
+    allWordIndices = np.asarray(allWordIndices)
+    return allWordIndices
+
 
 # create one-hot matrices out of the indexed tweets
-x = k_tokenizer.sequences_to_matrix(allWordIndices, mode='binary')
+x = k_tokenizer.sequences_to_matrix(x_preprocessing(x), mode='binary')
 # treat the labels as categories
 y = keras.utils.to_categorical(y, 2)
 
@@ -216,4 +219,20 @@ model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_si
 # Final evaluation of the model
 scores = model.evaluate(X_test, y_test, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
+
+# q 4  - testint the model on data that was collected in real time
+
+
+raw_tweets = pd.read_csv('realTime.csv', encoding='utf8')
+list_tweets = raw_tweets.values.tolist()
+
+#
+to_predict = k_tokenizer.sequences_to_matrix(x_preprocessing(list_tweets), mode='binary')
+
+predictions = model.predict(to_predict, batch_size = 200)
+
+
+
+
+
 
