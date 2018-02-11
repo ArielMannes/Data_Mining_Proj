@@ -15,7 +15,6 @@ import os
 os.environ["MKL_THREADING_LAYER"] = "GNU"
 os.environ["KERAS_BACKEND"] = "theano"
 import numpy as np
-
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 import keras
@@ -230,6 +229,8 @@ list_tweets = raw_tweets.values.tolist()
 to_predict = k_tokenizer.sequences_to_matrix(x_preprocessing(list_tweets), mode='binary')
 
 predictions = model.predict(to_predict, batch_size = 200)
+
+print(predictions)
 
 
 
