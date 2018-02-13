@@ -193,7 +193,12 @@ model.add(LSTM(lstm_out))
 model.add(Dense(2,activation='softmax'))
 model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
 print(model.summary())
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=7, batch_size=256)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=8, batch_size=100)
+
+#4 epoches, batch 256 - acc - 63.3
+#8 epoches,batch 256 - acc - 66.76
+#8 epoches, batch 500 - acc - 63.83
+#8 epoches, batch 100 - acc -64.96
 
 # Final evaluation of the model
 validation_size = 500
@@ -205,36 +210,21 @@ y_test = y_test[:-validation_size]
 scores = model.evaluate(X_test, y_test, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
 
-pos_cnt, neg_cnt, pos_correct, neg_correct = 0, 0, 0, 0
-for x in range(len(X_validate)):
 
-    result = model.predict(X_validate[x].reshape(1, X_test.shape[1]), batch_size=1, verbose=2)[0]
-
-    if np.argmax(result) == np.argmax(Y_validate[x]):
-        if np.argmax(Y_validate[x]) == 0:
-            neg_correct += 1
-        else:
-            pos_correct += 1
-
-    if np.argmax(Y_validate[x]) == 0:
-        neg_cnt += 1
-    else:
-        pos_cnt += 1
-
-print("pos_acc", pos_correct / pos_cnt * 100, "%")
-print("neg_acc", neg_correct / neg_cnt * 100, "%")
 # q 4  - testint the model on data that was collected in real time
 
 
-# raw_tweets = pd.read_csv('realTime.csv', encoding='utf8')
-# list_tweets = raw_tweets.values.tolist()
+raw_tweets = pd.read_csv('realTime.csv', encoding='utf8')
+list_tweets =  list(raw_tweets.values[i][0] for i in range (0, len(raw_tweets.values)))
+
 #
-# #
-# to_predict = k_tokenizer.sequences_to_matrix(x_preprocessing(list_tweets), mode='binary')
-#
-# predictions = model.predict(to_predict, batch_size = 200)
-#
-# print(predictions)
+to_predict = k_tokenizer.texts_to_sequences(list_tweets)
+to_predict = sequence.pad_sequences(to_predict, maxlen=54L)
+
+
+predictions = model.predict(to_predict, batch_size = 200)
+
+print(predictions)
 
 
 
