@@ -18,7 +18,7 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 import keras
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers.embeddings import Embedding
@@ -90,10 +90,9 @@ def wordify(t):
 
 # combine descriptions and text tweets into a single list of 'words'
 def get_list_of_words(lst):
-    word_list = " ".join(list(map(lambda x: try_str(x[10]), lst)))
     word_list = " ".join(list(map(lambda x: try_str(x[19]), lst)))
-    word_list = word_list.lower().split(" ")
-    # word_list = wordify(word_list).split(" ")
+    #word_list = word_list.lower().split(" ")
+    word_list = wordify(word_list).split(" ")
     word_list = list(w for w in word_list if len(w) > 1 and w not in stop_words)
     return word_list
 
@@ -102,8 +101,8 @@ def word_distrebution(text, messeg, f):
     ret_list = []
     list_words = " ".join(list(map(f, text)))
     #list_words = " ".join(list(map(lambda x: try_str(x[19]), text)))
-    list_words = list_words.lower().split(" ")
-    # word_list = wordify(word_list).split(" ")
+    #list_words = list_words.lower().split(" ")
+    list_words = wordify(list_words).split(" ")
     list_words = list(w for w in list_words if len(w) > 1 and w not in stop_words)
     #list_words = get_list_of_words(text)
     word_dist = FreqDist(list_words)
@@ -146,7 +145,7 @@ tweet_by_gender = (map(lambda x: (try_str(x[10])+ try_str(x[19]), x[5]),filtered
 feature_set = [(find_features(top_words, line[0]), line[1]) for line in tweet_by_gender]
 training_set = feature_set[:int(len(feature_set)*4/5)]
 testing_set = feature_set[int(len(feature_set)*4/5):]
-
+#
 # # creating a naive bayes classifier
 # NB_classifier = nltk.NaiveBayesClassifier.train(training_set)
 # accuracy = nltk.classify.accuracy(NB_classifier, testing_set)*100
@@ -183,17 +182,18 @@ y = keras.utils.to_categorical(y, 2)
 X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2, random_state= 42)
 
 
-
 embed_dim = 128
 lstm_out = 196
 
-model = Sequential()
-model.add(Embedding(max_words, embed_dim,input_length = x.shape[1]))
-model.add(LSTM(lstm_out))
-model.add(Dense(2,activation='softmax'))
-model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
-print(model.summary())
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=8, batch_size=100)
+model = load_model('my_model.h5')
+# model = Sequential()
+#
+# model.add(Embedding(max_words, embed_dim,input_length = x.shape[1]))
+# model.add(LSTM(lstm_out))
+# model.add(Dense(2,activation='softmax'))
+# model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
+# print(model.summary())
+# model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=8, batch_size=256)
 
 #4 epoches, batch 256 - acc - 63.3
 #8 epoches,batch 256 - acc - 66.76
@@ -210,7 +210,7 @@ y_test = y_test[:-validation_size]
 scores = model.evaluate(X_test, y_test, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
 
-
+#model.save('my_model.h5')
 # q 4  - testint the model on data that was collected in real time
 
 
@@ -223,8 +223,14 @@ to_predict = sequence.pad_sequences(to_predict, maxlen=54L)
 
 
 predictions = model.predict(to_predict, batch_size = 200)
+#round predictions were 0 is female
+                     #  1 is male
+rounded = [round(x[0]) for x in predictions]
+num_of_men = rounded.count(1.0)
+num_of_women = len(rounded) - num_of_men
 
-print(predictions)
+print('women percentage in collected tweets',)
+print(num_of_women)
 
 
 
