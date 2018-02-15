@@ -229,8 +229,8 @@ rounded = [round(x[0]) for x in predictions]
 num_of_men = rounded.count(1.0)
 num_of_women = len(rounded) - num_of_men
 
-print('women percentage in collected tweets',)
-print(num_of_women)
+print('women percentage in collected tweets',float(num_of_women)/len(rounded)*100)
+#print(num_of_women)
 
 
 
